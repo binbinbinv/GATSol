@@ -30,13 +30,6 @@ def set_seed(seed):
     # torch.use_deterministic_algorithms(True)
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
-# # 设置随机数种子
-# seed = 2024
-# torch.manual_seed(seed) 
-# random.seed(seed)
-# np.random.seed(seed)
-# torch.cuda.manual_seed_all(seed)
-
 set_seed(2024)
 
 print("data loading...............")
@@ -47,7 +40,7 @@ val1_dataset = [] # data数据对象的list集合
 
 train_path = "/home/bli/homology/dataset/Esol/fold_completed_pkl_BLOSUM62+ESM/train"
 test_path = "/home/bli/homology/dataset/Esol/fold_completed_pkl_BLOSUM62+ESM/test"
-val_path = "/home/bli/homology/dataset/Scerevisiae/109_test/distance_10/109_1_pkl"
+val_path = "/home/bli/homology/dataset/Scerevisiae/109_test/distance_10/109_pkl"
 val1_path = "/home/bli/homology/dataset/Scerevisiae/afblast_371/afpkl_371"
 
 for filename in os.listdir(train_path):
