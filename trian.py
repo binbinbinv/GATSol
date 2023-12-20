@@ -14,16 +14,41 @@ import torch.optim as optim
 from torch_geometric.nn import GCNConv, global_mean_pool
 from torch_geometric.nn import GATConv
 import torch.nn.functional as F
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+from sklearn.metrics import roc_curve
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1' 
+
+def set_seed(seed):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+
+    random.seed(seed)
+    np.random.seed(seed)
+
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.benchmark = False
+    # torch.use_deterministic_algorithms(True)
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
+# # 设置随机数种子
+# seed = 2024
+# torch.manual_seed(seed) 
+# random.seed(seed)
+# np.random.seed(seed)
+# torch.cuda.manual_seed_all(seed)
+
+set_seed(2024)
 
 print("data loading...............")
 train_dataset = [] # data数据对象的list集合
 test_dataset = [] # data数据对象的list集合
 val_dataset = [] # data数据对象的list集合
+val1_dataset = [] # data数据对象的list集合
 
-train_path = "/home/bli/GNN/Graph_bin/data/homology/alphafold_test/fold_completed_pkl_2697/train"
-test_path = "/home/bli/GNN/Graph_bin/data/homology/alphafold_test/fold_completed_pkl_2697/test"
-val_path = "/home/bli/Database/Scerevisiae/109/distance_10/109_pkl"
+train_path = "/home/bli/homology/dataset/Esol/fold_completed_pkl_BLOSUM62+ESM/train"
+test_path = "/home/bli/homology/dataset/Esol/fold_completed_pkl_BLOSUM62+ESM/test"
+val_path = "/home/bli/homology/dataset/Scerevisiae/109_test/distance_10/109_1_pkl"
+val1_path = "/home/bli/homology/dataset/Scerevisiae/afblast_371/afpkl_371"
 
 for filename in os.listdir(train_path):
   file_path = os.path.join(train_path, filename)
@@ -43,36 +68,44 @@ for filename in os.listdir(val_path):
     data = pickle.load(f).to(torch.device('cuda'))
   val_dataset.append(data)
 
-# 设置随机数种子
-seed = 2024
-torch.manual_seed(seed) 
-random.seed(seed)
-np.random.seed(seed)
-torch.cuda.manual_seed_all(seed)
+for filename in os.listdir(val1_path):
+  file_path = os.path.join(val1_path, filename)
+  with open(file_path, 'rb') as f:
+    data = pickle.load(f).to(torch.device('cuda'))
+  val1_dataset.append(data)
 
 # 打乱数据集的顺序
 random.shuffle(train_dataset)
 
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
-val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
-# print("data loaded !!!!!!!!!!")
+batch_size = 4
+train_loader = DataLoader(train_dataset, batch_size = batch_size, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle=False)
+val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle=False)
+val1_loader = DataLoader(val1_dataset, batch_size = batch_size, shuffle=False)
+print("data loaded !!!!!!!!!!")
 
 # 定义图神经网络模型
 class GATClassifier(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_heads):
+    def __init__(self, in_channels, hidden_channels, num_heads, num_layers):
         super(GATClassifier, self).__init__()
-        self.conv1 = GATConv(in_channels, hidden_channels, heads=num_heads)
-        self.conv2 = GATConv(hidden_channels * num_heads, hidden_channels, heads=num_heads)
-        self.lin = nn.Linear(hidden_channels * num_heads, 1)
+        self.convs = nn.ModuleList()
+        for i in range(num_layers):
+            if i == 0:
+                self.convs.append(GATConv(in_channels, hidden_channels, heads=num_heads))
+            else:
+                self.convs.append(GATConv(hidden_channels * num_heads, hidden_channels, heads=num_heads))
+        self.lin1 = nn.Linear(hidden_channels * num_heads, 128)
+        self.lin2 = nn.Linear(128, 1)
 
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
-        x = F.relu(self.conv1(x, edge_index))
-        x = F.relu(self.conv2(x, edge_index))
-        x = global_mean_pool(x, batch)  # Global pooling to obtain a fixed-size representation
-        x = self.lin(x)
-        return x.squeeze()  # 压缩输出维度为1
+        for conv in self.convs:
+            x = F.relu(conv(x, edge_index))
+        x = global_mean_pool(x, batch)
+        x = F.relu(self.lin1(x))
+        x = self.lin2(x)
+        # x = self.lin1(x)
+        return x.squeeze()
 
 # 定义训练函数
 def train(model, device, loader, optimizer, criterion):
@@ -112,20 +145,23 @@ def predictions(model, device, loader):
         for data in loader:
             data = data.to(device)
             output = model(data)
-            y_hat = torch.cat((y_hat, output), 0) 
-            y_true = torch.cat((y_true, data.y), 0)
+            if output.dim() == 0:
+                output = output.unsqueeze(0)
+            y_hat = torch.cat((y_hat, output),0) 
+            y_true = torch.cat((y_true, data.y),0)
     return y_hat, y_true
 
 
 # 设置训练参数
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 in_channels = 1300  # 输入特征的维度
-hidden_channels = 512  # 隐层特征的维度
+hidden_channels = 1024  # 隐层特征的维度
 num_classes = 1  # 分类类别的数量
 num_heads = 16  # 注意力头的数量
+num_layers = 2  # 网络层数
 
 # 创建模型实例
-model = GATClassifier(in_channels, hidden_channels, num_heads).to(device)
+model = GATClassifier(in_channels, hidden_channels, num_heads, num_layers).to(device)
 
 #初始化参数
 for m in model.modules():
@@ -133,15 +169,15 @@ for m in model.modules():
         nn.init.kaiming_uniform_(m.weight)
 
 # 定义损失函数和优化器
-initial_lr = 0.000005 # 学习率
-epochs = 15  # 训练轮数
+initial_lr = 0.000002 # 学习率
+epochs = 10  # 训练轮数
 criterion = nn.MSELoss(reduction='sum')
 optimizer = optim.Adam(model.parameters(), lr=initial_lr)
 
 #开始训练和测试
 best_loss = float('inf')  # 初始最佳损失设为无穷大
 
-# print('seed -- ' + str(seed)+' -- Training start...............')
+print('Training start...............')
 model.train()
 for epoch in range(1, epochs + 1):
     if epoch < 10:
@@ -153,37 +189,52 @@ for epoch in range(1, epochs + 1):
     train_accuracy = test(model, device, train_loader, criterion)
     test_accuracy = test(model, device, test_loader, criterion)
     val_accuracy = test(model, device, val_loader, criterion)
+    val1_accuracy = test(model, device, val1_loader, criterion)
     if test_accuracy < best_loss:
         best_loss = test_accuracy
-        torch.save(model.state_dict(), '/home/bli/GNN/Graph_bin/data/homology/alphafold_test/best_model.pt')
-    print(f'Epoch: {epoch}, Train_Loss: {train_accuracy:.8f}, Test_Loss: {test_accuracy:.8f}, ValLoss: {val_accuracy:.8f}')
+        torch.save(model.state_dict(), '/home/bli/homology/best_model.pt')
+    print(f'Epoch: {epoch}, Train_Loss: {train_accuracy:.8f}, Test_Loss: {test_accuracy:.8f}, ValLoss: {val_accuracy:.8f}, Val1Loss: {val1_accuracy:.8f}')
 
-print('Training finished.')
+# print('Seed = ' +  str(seed) + ' Training finished.')
 
 
-model.load_state_dict(torch.load("/home/bli/GNN/Graph_bin/data/homology/alphafold_test/best_model.pt"))
+model.load_state_dict(torch.load("/home/bli/homology/best_model.pt"))
 model.eval()
 test_loss = test(model, device, test_loader, criterion)
 val_loss = test(model, device, val_loader, criterion)
+val1_loss = test(model, device, val1_loader, criterion)
 
 y_hat, y_true = predictions(model, device, test_loader)
 val_hat, val_true = predictions(model, device, val_loader)
+val1_hat, val1_true = predictions(model, device, val1_loader)
 
 from sklearn import metrics
 from scipy.stats import pearsonr
 
 r2 = metrics.r2_score(y_true.cpu(), y_hat.cpu())
 r2_val = metrics.r2_score(val_true.cpu(), val_hat.cpu())
+r2_val1 = metrics.r2_score(val1_true.cpu(), val1_hat.cpu())
 pearson = pearsonr(y_true.cpu(), y_hat.cpu())
 pearson_val = pearsonr(val_true.cpu(), val_hat.cpu())
+pearson_val1 = pearsonr(val1_true.cpu(), val1_hat.cpu())
 print(f'test loss: {test_loss:.8f}, R2: {r2:.8f}, Pearson: {pearson[0]:.8f}')
 print(f'val loss: {val_loss:.8f}, R2_val: {r2_val:.8f}, Pearson_val: {pearson_val[0]:.8f}')
+print(f'val1 loss: {val1_loss:.8f}, R2_val1: {r2_val1:.8f}, Pearson_val1: {pearson_val1[0]:.8f}')
 
 y_hat = y_hat.cpu().numpy()
 y_true = y_true.cpu().numpy()
 val_hat = val_hat.cpu().numpy()
 val_true = val_true.cpu().numpy()
+val1_hat = val1_hat.cpu().numpy()
+val1_true = val1_true.cpu().numpy()
 
+binary_pred = [1 if pred >= 0.5 else 0 for pred in y_hat]
+binary_true = [1 if true >= 0.5 else 0 for true in y_true]
+
+# 输出测试集ROC曲线横纵坐标
+fpr, tpr, thresholds = roc_curve(binary_true, y_hat)
+df = pd.DataFrame({'fpr':fpr, 'tpr':tpr})
+df.to_csv('/home/bli/homology/Roc.csv', index=False)
 
 def binary_evaluate(y_true, y_hat, cut_off = 0.5):
   binary_pred = [1 if pred >= cut_off else 0 for pred in y_hat]
@@ -201,3 +252,4 @@ def binary_evaluate(y_true, y_hat, cut_off = 0.5):
 
 binary_evaluate(y_true, y_hat, cut_off = 0.5)
 binary_evaluate(val_true, val_hat, cut_off = 0.5)
+binary_evaluate(val1_true, val1_hat, cut_off = 0.5)
