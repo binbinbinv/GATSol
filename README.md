@@ -36,17 +36,17 @@ conda activate pyg
 
 ## 2.Predict your own protein
 
-1. Download the best model after training by following the readme.md file in GATSol/check_point/best_model/readme.md, and put it into the best_model folder.
+1. Download the best model after training by following the **readme.md** file in GATSol/check_point/best_model/readme.md, and put it into the best_model folder.
 
-2. You must prepare your protein as the format fasta and pdb, and then put them in the folder below:
+2. You must prepare your protein as the format **fasta** and **pdb**, and then put them in the folder below:
 
    ①GATSol/Predict/NEED_to_PREPARE/fasta
 
    ②GATSol/Predict/NEED_to_PREPARE/pdb
 
-   And you need to prepare a list.csv as the example in the /home/bli/GATSol/Predict/NEED_to_PREPARE.
+   And you need to prepare a **list.csv** as the example in the /home/bli/GATSol/Predict/NEED_to_PREPARE.
 
-2. After preparing all the files from step ①, go to your working folder and execute the following command, you will get the Output.csv file, which contains the prediction results you need。
+3. After preparing all the files, cd to the prediction work folder and execute the following command, you will get the **Output.csv** file, which contains the prediction results you need.
 
    ```shell
    cd GATSol/Predict
