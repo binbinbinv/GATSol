@@ -7,4 +7,12 @@ GATSol, an enhanced predictor of protein solubility through the synergy of 3D st
 1. cd GATSol/
 
 2. Download the datasets follow the description in ./dataset/readme.md
-3. python re-train.py
+
+3. Extract the dataset by the command:
+
+   ```shell
+   tar -zxvf  ~/GATSol_dataset.tar.gz -C ~/GATSol/dataset/
+   ```
+
+4. python re-train.py
+
