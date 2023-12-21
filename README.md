@@ -4,7 +4,7 @@ GATSol, an enhanced predictor of protein solubility through the synergy of 3D st
 
 ## 1.Re-train the model
 
-1. 克隆项目到本地
+1. Clone GATSol project to local server
 
    ```shell
    git clone git@github.com:binbinbinv/GATSol.git
@@ -25,4 +25,3 @@ GATSol, an enhanced predictor of protein solubility through the synergy of 3D st
    python re-train.py
    ```
 
-   
