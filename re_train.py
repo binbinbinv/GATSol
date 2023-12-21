@@ -2,19 +2,17 @@ import os
 import pandas as pd
 import torch
 import numpy as np
-from torch_geometric.data import Data
-import warnings
-warnings.filterwarnings("ignore")
-import pickle
-from tqdm import tqdm
 from torch_geometric.data import DataLoader
 import random
 import torch.nn as nn
 import torch.optim as optim
-from torch_geometric.nn import GCNConv, global_mean_pool
+from torch_geometric.nn import global_mean_pool
 from torch_geometric.nn import GATConv
 import torch.nn.functional as F
 from sklearn.metrics import roc_curve
+from sklearn import metrics
+from scipy.stats import pearsonr
+
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1' 
 
 def set_seed(seed):
@@ -159,13 +157,13 @@ for epoch in range(1, epochs + 1):
     val1_accuracy = test(model, device, val1_loader, criterion)
     if test_accuracy < best_loss:
         best_loss = test_accuracy
-        torch.save(model.state_dict(), '/home/bli/homology/best_model.pt')
+        torch.save(model.state_dict(), '/home/bli/GATSol/check_point/best_model.pt')
     print(f'Epoch: {epoch}, Train_Loss: {train_accuracy:.8f}, Test_Loss: {test_accuracy:.8f}, ValLoss: {val_accuracy:.8f}, Val1Loss: {val1_accuracy:.8f}')
 
 # print('Seed = ' +  str(seed) + ' Training finished.')
 
 
-model.load_state_dict(torch.load("/home/bli/homology/best_model.pt"))
+model.load_state_dict(torch.load("/home/bli/GATSol/check_point/best_model.pt"))
 model.eval()
 test_loss = test(model, device, test_loader, criterion)
 val_loss = test(model, device, val_loader, criterion)
@@ -174,9 +172,6 @@ val1_loss = test(model, device, val1_loader, criterion)
 y_hat, y_true = predictions(model, device, test_loader)
 val_hat, val_true = predictions(model, device, val_loader)
 val1_hat, val1_true = predictions(model, device, val1_loader)
-
-from sklearn import metrics
-from scipy.stats import pearsonr
 
 r2 = metrics.r2_score(y_true.cpu(), y_hat.cpu())
 r2_val = metrics.r2_score(val_true.cpu(), val_hat.cpu())
@@ -194,14 +189,6 @@ val_hat = val_hat.cpu().numpy()
 val_true = val_true.cpu().numpy()
 val1_hat = val1_hat.cpu().numpy()
 val1_true = val1_true.cpu().numpy()
-
-binary_pred = [1 if pred >= 0.5 else 0 for pred in y_hat]
-binary_true = [1 if true >= 0.5 else 0 for true in y_true]
-
-# 输出测试集ROC曲线横纵坐标
-fpr, tpr, thresholds = roc_curve(binary_true, y_hat)
-df = pd.DataFrame({'fpr':fpr, 'tpr':tpr})
-df.to_csv('/home/bli/homology/Roc.csv', index=False)
 
 def binary_evaluate(y_true, y_hat, cut_off = 0.5):
   binary_pred = [1 if pred >= cut_off else 0 for pred in y_hat]
