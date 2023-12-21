@@ -93,7 +93,7 @@ num_layers = 2  # 网络层数
 # 创建模型实例
 model = GATClassifier(in_channels, hidden_channels, num_heads, num_layers).to(device)
 
-model.load_state_dict(torch.load("/home/bli/homology/best_model.pt"))
+model.load_state_dict(torch.load("/home/bli/GATSol/check_point/best_model/best_model.pt"))
 model.eval()
 
 # 定义损失函数和优化器
@@ -105,19 +105,6 @@ test_loss = test(model, device, test_loader, criterion)
 y_hat, y_true = predictions(model, device, test_loader)
 
 from sklearn import metrics
-from scipy.stats import pearsonr
-from sklearn.metrics import roc_curve
-
-y_hat = y_hat.cpu()
-y_true = y_true.cpu()
-
-binary_pred = [1 if pred >= 0.5 else 0 for pred in y_hat]
-binary_true = [1 if true >= 0.5 else 0 for true in y_true]
-
-# 输出测试集ROC曲线横纵坐标
-fpr, tpr, thresholds = roc_curve(binary_true, y_hat)
-df = pd.DataFrame({'fpr':fpr, 'tpr':tpr})
-df.to_csv('/home/bli/homology/Roc.csv', index=False)
 
 def binary_evaluate(y_true, y_hat, cut_off = 0.5):
   binary_pred = [1 if pred >= cut_off else 0 for pred in y_hat]
