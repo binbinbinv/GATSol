@@ -16,21 +16,10 @@ from torch_geometric.nn import GATConv
 import torch.nn.functional as F
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1' 
 
-print("data loading...............")
-test_dataset = [] # data数据对象的list集合
-
-test_path = "/home/bli/homology/dataset/Esol/fold_completed_pkl_BLOSUM62+ESM/test"
-
-for filename in os.listdir(test_path):
-  file_path = os.path.join(test_path, filename)
-  with open(file_path, 'rb') as f:
-    data = pickle.load(f).to(torch.device('cuda'))
-  test_dataset.append(data)
-
-
-batch_size = 4
-test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle=False)
-print("data loaded !!!!!!!!!!")
+def name_seq_dict(path):
+    pdb_chain_list = pd.read_csv(path, header=0)
+    dict_pdb_chain = pdb_chain_list.set_index('id')['sequence'].to_dict()
+    return dict_pdb_chain
 
 # 定义图神经网络模型
 class GATClassifier(nn.Module):
@@ -55,24 +44,12 @@ class GATClassifier(nn.Module):
         # x = self.lin1(x)
         return x.squeeze()
 
-# 定义测试函数
-def test(model, device, loader, criterion):
-    model.eval()
-    loss = 0
-
-    with torch.no_grad():
-        for data in loader:
-            data = data.to(device)
-            output = model(data)
-            loss += criterion(output, data.y).item()
-    return loss/len(loader.dataset)
-
 def predictions(model, device, loader):
     model.eval()
     y_hat = torch.tensor([]).cuda()
     y_true = torch.tensor([]).cuda()
     with torch.no_grad():
-        for data in loader:
+        for data in tqdm(loader):
             data = data.to(device)
             output = model(data)
             if output.dim() == 0:
@@ -81,6 +58,35 @@ def predictions(model, device, loader):
             y_true = torch.cat((y_true, data.y),0)
     return y_hat, y_true
 
+def print_box(message):
+    box_width = 40
+    message = f" {message} "
+    padding = (box_width - len(message)) // 2
+    border = '*' * box_width
+    padding_str = '*' + ' ' * padding
+
+    print(border)
+    print(padding_str + message + ' ' * (box_width - len(padding_str) - len(message)) + '*')
+    print(border)
+
+# 在框框中间显示 "Prediction begin"
+print_box("Prediction Begin")
+
+pkl_path = "./NEED_to_PREPARE/pkl"
+name_dict = name_seq_dict("./NEED_to_PREPARE/list.csv")
+file_names = list(name_dict.keys())
+
+test_dataset = [] # data数据对象的list集合
+
+for filename in file_names:
+  file_path = os.path.join(pkl_path, filename+".pkl")
+  with open(file_path, 'rb') as f:
+    data = pickle.load(f).to(torch.device('cuda'))
+  test_dataset.append(data)
+
+
+batch_size = 1
+test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle=False)
 
 # 设置训练参数
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -93,32 +99,18 @@ num_layers = 2  # 网络层数
 # 创建模型实例
 model = GATClassifier(in_channels, hidden_channels, num_heads, num_layers).to(device)
 
-model.load_state_dict(torch.load("/home/bli/GATSol/check_point/best_model/best_model.pt"))
+model.load_state_dict(torch.load("../check_point/best_model/beat_model.pt"))
 model.eval()
-
-# 定义损失函数和优化器
-criterion = nn.MSELoss(reduction='sum')
-
-#开始测试
-test_loss = test(model, device, test_loader, criterion)
 
 y_hat, y_true = predictions(model, device, test_loader)
 
-from sklearn import metrics
+y_hat = list(y_hat.cpu().numpy())
 
-def binary_evaluate(y_true, y_hat, cut_off = 0.5):
-  binary_pred = [1 if pred >= cut_off else 0 for pred in y_hat]
-  binary_true = [1 if true >= cut_off else 0 for true in y_true]
-  binary_acc = metrics.accuracy_score(binary_true, binary_pred)
-  precision = metrics.precision_score(binary_true, binary_pred)
-  recall = metrics.recall_score(binary_true, binary_pred)
-  f1 = metrics.f1_score(binary_true, binary_pred)
-  auc = metrics.roc_auc_score(binary_true, y_hat)
-  mcc = metrics.matthews_corrcoef(binary_true, binary_pred)
-  TN, FP, FN, TP = metrics.confusion_matrix(binary_true, binary_pred).ravel()
-  sensitivity = 1.0 * TP / (TP + FN)
-  specificity = 1.0 * TN / (FP + TN)
-  print(f'Accuracy: {binary_acc:.8f}, Precision: {precision:.8f}, Recall: {recall:.8f}, F1: {f1:.8f}, AUC: {auc:.8f}, MCC: {mcc:.8f}, Sensitivity: {sensitivity:.8f}, Specificity: {specificity:.8f}')
+df = pd.read_csv("./NEED_to_PREPARE/list.csv")
 
-binary_evaluate(y_true, y_hat, cut_off = 0.5)
+df["Solubility_hat"] = y_hat
 
+# 保存修改后的 DataFrame 到 CSV 文件
+df.to_csv("./Output.csv", index=False)
+
+print_box("Prediction Completed and Check the Output.csv")
