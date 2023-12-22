@@ -52,4 +52,4 @@ conda activate pyg
    cd GATSol/Predict
    bash ./tools/Predict.sh
    ```
-zzz
+
