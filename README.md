@@ -50,6 +50,6 @@ conda activate pyg
 
    ```shell
    cd GATSol/Predict
-   bash ./tools/Predict.py
+   bash ./tools/Predict.sh
    ```
 
