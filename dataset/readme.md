@@ -1,3 +1,3 @@
-The dataset after pre-processing is available at the website: https://www.alipan.com/drive/file/backup/658307855fa0492e736849d0b5a8b7af1f860ba5,
+The dataset after pre-processing is available at the website: https://drive.google.com/file/d/1DcONxhMNuuykWq-fQQ6D5uz0P3G3LTQP/view?usp=sharing,
 Plz download GATSol_dataset.tar.gz and extract it, you will get the  GATSol_datasets.pkl file.
 If you wanna re-train our training process, plz use the re_train.py
