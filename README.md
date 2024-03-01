@@ -5,7 +5,7 @@ GATSol, an enhanced predictor of protein solubility through the synergy of 3D st
 ## 0.Conda environmennt create
 
 ```shell
-git clone git@github.com:binbinbinv/GATSol.git
+git clone https://github.com/binbinbinv/GATSol.git
 cd GATSol/
 conda activate base
 conda env create -f environment.yaml
