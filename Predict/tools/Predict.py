@@ -99,7 +99,7 @@ num_layers = 2  # 网络层数
 # 创建模型实例
 model = GATClassifier(in_channels, hidden_channels, num_heads, num_layers).to(device)
 
-model.load_state_dict(torch.load("../check_point/best_model/best_model.pt"))
+model.load_state_dict(torch.load("../check_point/best_model/best_model.pt")， strict=False)
 model.eval()
 
 y_hat, y_true = predictions(model, device, test_loader)
