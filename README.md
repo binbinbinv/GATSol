@@ -16,7 +16,7 @@ Then you can install GATSol environment manually by following the instructions:
 
 ```shell
 conda create -n GATSol python=3.9
-conda activate ProtSol
+conda activate GATSol
 pip install torch==2.2.2 torchvision torchaudio
 pip install pandas bio seaborn matplotlib_inline
 pip install scikit-learn transformers Ipython
