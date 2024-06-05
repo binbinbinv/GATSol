@@ -1,9 +1,3 @@
 data loading...............
 data loaded !!!!!!!!!!
 Training start...............
-test loss: 0.04998417, R2: 0.51677685, Pearson: 0.72022104
-val loss: 0.05232336, R2_val: 0.42315691, Pearson_val: 0.69323459
-val1 loss: 0.06221677, R2_val1: 0.36052919, Pearson_val1: 0.62217443
-Accuracy: 0.79090909, Precision: 0.78091873, Recall: 0.74410774, F1: 0.76206897, AUC: 0.88139429, MCC: 0.57631017, Sensitivity: 0.74410774, Specificity: 0.82920110
-Accuracy: 0.77064220, Precision: 0.85507246, Recall: 0.79729730, F1: 0.82517483, AUC: 0.85984556, MCC: 0.49557736, Sensitivity: 0.79729730, Specificity: 0.71428571
-Accuracy: 0.76280323, Precision: 0.76394850, Recall: 0.84360190, F1: 0.80180180, AUC: 0.82970972, MCC: 0.51218288, Sensitivity: 0.84360190, Specificity: 0.65625000
