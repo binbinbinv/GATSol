@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 from torch import optim
 import datetime
+from utils import get_hardware_name
 
 class GATClassifier(nn.Module):
     def __init__(self, in_channels, hidden_channels, num_heads, num_layers):
@@ -62,8 +63,8 @@ def test(model, device, loader, criterion):
 
 def predictions(model, device, loader):
     model.eval()
-    y_hat = torch.tensor([]).cuda()
-    y_true = torch.tensor([]).cuda()
+    y_hat = torch.tensor([]).to(device)
+    y_true = torch.tensor([]).to(device)
     with torch.no_grad():
         for data in loader:
             data = data.to(device)
@@ -91,7 +92,7 @@ dataset = []  # data数据对象的list集合
 for filename in os.listdir(data_path):
     file_path = os.path.join(data_path, filename)
     with open(file_path, 'rb') as f:
-        data = pickle.load(f).to(torch.device('cuda'))
+        data = pickle.load(f).to(torch.device(get_hardware_name()))
     dataset.append(data)
 
 batch_size = 16

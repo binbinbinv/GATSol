@@ -16,6 +16,8 @@ from torch_geometric.nn import GATConv
 import torch.nn.functional as F
 from sklearn.metrics import roc_curve
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1' 
+from utils import predictions, get_hardware_name
+
 
 def set_seed(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -46,25 +48,25 @@ val1_path = "/home/bli/homology/dataset/Scerevisiae/afblast_371/afpkl_371"
 for filename in os.listdir(train_path):
   file_path = os.path.join(train_path, filename)
   with open(file_path, 'rb') as f:
-    data = pickle.load(f).to(torch.device('cuda'))
+    data = pickle.load(f).to(torch.device(get_hardware_name()))
   train_dataset.append(data)
 
 for filename in os.listdir(test_path):
   file_path = os.path.join(test_path, filename)
   with open(file_path, 'rb') as f:
-    data = pickle.load(f).to(torch.device('cuda'))
+    data = pickle.load(f).to(torch.device(get_hardware_name()))
   test_dataset.append(data)
 
 for filename in os.listdir(val_path):
   file_path = os.path.join(val_path, filename)
   with open(file_path, 'rb') as f:
-    data = pickle.load(f).to(torch.device('cuda'))
+    data = pickle.load(f).to(torch.device(get_hardware_name()))
   val_dataset.append(data)
 
 for filename in os.listdir(val1_path):
   file_path = os.path.join(val1_path, filename)
   with open(file_path, 'rb') as f:
-    data = pickle.load(f).to(torch.device('cuda'))
+    data = pickle.load(f).to(torch.device(get_hardware_name()))
   val1_dataset.append(data)
 
 # 打乱数据集的顺序
@@ -129,20 +131,6 @@ def test(model, device, loader, criterion):
             output = model(data)
             loss += criterion(output, data.y).item()
     return loss/len(loader.dataset)
-
-def predictions(model, device, loader):
-    model.eval()
-    y_hat = torch.tensor([]).cuda()
-    y_true = torch.tensor([]).cuda()
-    with torch.no_grad():
-        for data in loader:
-            data = data.to(device)
-            output = model(data)
-            if output.dim() == 0:
-                output = output.unsqueeze(0)
-            y_hat = torch.cat((y_hat, output),0) 
-            y_true = torch.cat((y_true, data.y),0)
-    return y_hat, y_true
 
 
 # 设置训练参数

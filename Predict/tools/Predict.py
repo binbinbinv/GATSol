@@ -14,6 +14,8 @@ import torch.optim as optim
 from torch_geometric.nn import GCNConv, global_mean_pool
 from torch_geometric.nn import GATConv
 import torch.nn.functional as F
+from utils import predictions, get_hardware_name
+
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1' 
 
 def name_seq_dict(path):
@@ -44,19 +46,6 @@ class GATClassifier(nn.Module):
         # x = self.lin1(x)
         return x.squeeze()
 
-def predictions(model, device, loader):
-    model.eval()
-    y_hat = torch.tensor([]).cuda()
-    y_true = torch.tensor([]).cuda()
-    with torch.no_grad():
-        for data in tqdm(loader):
-            data = data.to(device)
-            output = model(data)
-            if output.dim() == 0:
-                output = output.unsqueeze(0)
-            y_hat = torch.cat((y_hat, output),0) 
-            y_true = torch.cat((y_true, data.y),0)
-    return y_hat, y_true
 
 def print_box(message):
     box_width = 40
@@ -81,7 +70,7 @@ test_dataset = [] # data数据对象的list集合
 for filename in file_names:
   file_path = os.path.join(pkl_path, filename+".pkl")
   with open(file_path, 'rb') as f:
-    data = pickle.load(f).to(torch.device('cuda'))
+    data = pickle.load(f).to(torch.device(get_hardware_name()))
   test_dataset.append(data)
 
 
@@ -99,7 +88,7 @@ num_layers = 2  # 网络层数
 # 创建模型实例
 model = GATClassifier(in_channels, hidden_channels, num_heads, num_layers).to(device)
 
-model.load_state_dict(torch.load("../check_point/best_model/best_model.pt"))
+model.load_state_dict(torch.load("../check_point/best_model/best_model.pt", map_location=torch.device('cpu')))
 model.eval()
 
 y_hat, y_true = predictions(model, device, test_loader)

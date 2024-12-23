@@ -19,4 +19,4 @@ done
 
 #################finished#####################
 
-echo "All .pdb files has been convertcd to protein distance map" 
+echo "All .pdb files have been converted to protein distance map" 
